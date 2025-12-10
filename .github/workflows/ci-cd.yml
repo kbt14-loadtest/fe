@@ -22,6 +22,7 @@ jobs:
 
       - name: docker push
         run: |
+          eche "${{ secrets.ENV_VALUE }}" >> .env
           docker build -t ${{ secrets.DOCKER_USER }}/fe .
           docker push ${{ secrets.DOCKER_USER}}/fe
 
