@@ -189,17 +189,37 @@ class AuthService {
         throw new Error('인증 정보가 없습니다.');
       }
 
-      const response = await axios.put(
-        `${API_URL}/api/users/profile`,
-        data,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'x-auth-token': token,
-            'x-session-id': sessionId
-          }
-        }
-      );
+      // 파일 업로드 시에는 FormData + 메타데이터 / 이름 등 일반 업데이트는 JSON
+      const isFileUpload = data instanceof File || data?.profileImage instanceof File;
+      const headers = {
+        'x-auth-token': token,
+        'x-session-id': sessionId
+      };
+
+      let payload = data;
+      let method = 'put';
+      let url = `${API_URL}/api/users/profile`;
+
+      if (isFileUpload) {
+        const file = data instanceof File ? data : data.profileImage;
+        const formData = new FormData();
+        formData.append('profileImage', file);
+        formData.append('contentType', file.type || 'application/octet-stream');
+        formData.append('fileName', file.name || 'profile-image');
+        payload = formData;
+        method = 'post';
+        url = `${API_URL}/api/users/profile-image`;
+        // Content-Type 헤더는 브라우저가 boundary를 포함해 자동 설정하도록 둔다
+      } else {
+        headers['Content-Type'] = 'application/json';
+      }
+
+      const response = await axios({
+        method,
+        url,
+        data: payload,
+        headers
+      });
 
       if (response.data?.success) {
         return response.data.user;
