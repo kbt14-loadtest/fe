@@ -220,6 +220,35 @@ class FileService {
         throw new Error(`S3 업로드에 실패했습니다. (${s3Response.status})`);
       }
 
+      // 3) 파일 메타데이터를 서버에 저장
+      const filename = imageKey ? imageKey.split('/').pop() : file.name;
+
+      const saveMetadataUrl = this.baseUrl ?
+        `${this.baseUrl}/api/files/metadata` :
+        '/api/files/metadata';
+
+      const metadataSaveResponse = await axiosInstance.post(
+        saveMetadataUrl,
+        {
+          fileKey: imageKey,
+          filename: filename,
+          originalname: file.name,
+          mimetype: file.type,
+          size: file.size
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-token': token,
+            'x-session-id': sessionId
+          },
+          withCredentials: true,
+          cancelToken: source.token
+        }
+      );
+
+      console.log('파일 메타데이터 저장 완료:', metadataSaveResponse.data);
+
       this.activeUploads.delete(file.name);
 
       // 최종 파일 URL 결정 (presigned URL에서 쿼리 제거)
@@ -227,16 +256,14 @@ class FileService {
 
       console.log('최종 파일 URL:', finalFileUrl);
 
-      // 백엔드가 파일 메타데이터를 제공하지 않으므로 프론트엔드에서 생성
-      // imageKey를 filename으로 사용
-      const filename = imageKey ? imageKey.split('/').pop() : file.name;
+      // 파일 메타데이터 반환 (fileId는 서버에서 반환된 값 사용)
+      const fileId = metadataSaveResponse.data.fileId || imageKey;
 
-      // 파일 메타데이터 반환
       return {
         success: true,
         data: {
           file: {
-            _id: imageKey, // imageKey를 _id로 사용
+            _id: fileId,
             filename: filename,
             originalname: file.name,
             mimetype: file.type,
