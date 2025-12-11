@@ -39,50 +39,48 @@ const ChatRoomInfo = ({ room, connectionStatus }) => {
         className="bg-surface-200 relative"
       >
         {/* 왼쪽: 참여자 아바타 + 인원수 */}
-        <Collapsible.Trigger
-          render={
-            <button className="bg-transparent border-none cursor-pointer flex items-center gap-2 hover:bg-background-contrast-100 rounded-lg px-2 py-1 -ml-2 transition-colors group">
-              <HStack gap="$100" alignItems="center">
-                {/* 아바타 겹치기 스타일 */}
-                <div className="flex -space-x-2">
-                  {participants.slice(0, maxVisibleAvatars).map((participant, index) => (
-                    <div
-                      key={participant._id}
-                      className="ring-1 rounded-full"
-                      style={{ zIndex: maxVisibleAvatars - index }}
-                    >
-                      <CustomAvatar
-                        user={participant}
-                        size="sm"
-                        showInitials
-                      />
-                    </div>
-                  ))}
-                  {remainingCount > 0 && (
-                    <div
-                      className="ring-1 rounded-full z-0"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-background-contrast-200 flex items-center justify-center">
-                        <span className="text-xs font-medium text-foreground-hint-100">
-                          +{remainingCount}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <HStack gap="$050" alignItems="center" className="ml-1">
-                  <GroupOutlineIcon  className="text-foreground-hint-100 group-hover:text-foreground-normal-100" />
-                  <Text
-                    typography="body2"
-                    className="text-foreground-hint-100 group-hover:text-foreground-normal-100 font-medium"
+        <Collapsible.Trigger asChild>
+          <button className="bg-transparent border-none cursor-pointer flex items-center gap-2 hover:bg-background-contrast-100 rounded-lg px-2 py-1 -ml-2 transition-colors group">
+            <HStack gap="$100" alignItems="center">
+              {/* 아바타 겹치기 스타일 */}
+              <div className="flex -space-x-2">
+                {participants.slice(0, maxVisibleAvatars).map((participant, index) => (
+                  <div
+                    key={participant._id}
+                    className="ring-1 rounded-full"
+                    style={{ zIndex: maxVisibleAvatars - index }}
                   >
-                    {participants.length}명
-                  </Text>
-                </HStack>
+                    <CustomAvatar
+                      user={participant}
+                      size="sm"
+                      showInitials
+                    />
+                  </div>
+                ))}
+                {remainingCount > 0 && (
+                  <div
+                    className="ring-1 rounded-full z-0"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-background-contrast-200 flex items-center justify-center">
+                      <span className="text-xs font-medium text-foreground-hint-100">
+                        +{remainingCount}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <HStack gap="$050" alignItems="center" className="ml-1">
+                <GroupOutlineIcon  className="text-foreground-hint-100 group-hover:text-foreground-normal-100" />
+                <Text
+                  typography="body2"
+                  className="text-foreground-hint-100 group-hover:text-foreground-normal-100 font-medium"
+                >
+                  {participants.length}명
+                </Text>
               </HStack>
-            </button>
-          }
-        />
+            </HStack>
+          </button>
+        </Collapsible.Trigger>
 
         {/* 중앙: 채팅방 제목 */}
         <Text

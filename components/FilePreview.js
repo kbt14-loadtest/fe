@@ -398,17 +398,4 @@ const FilePreview = ({
   );
 };
 
-FilePreview.defaultProps = {
-  files: [],
-  uploading: false,
-  uploadProgress: 0,
-  uploadError: null,
-  showFileName: true,
-  showFileSize: true,
-  previewSize: 'md',
-  variant: 'default',
-  allowPaste: true,
-  maxFiles: 10
-};
-
 export default memo(FilePreview);

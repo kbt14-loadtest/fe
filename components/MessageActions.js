@@ -5,13 +5,13 @@ import { Button, IconButton, VStack, HStack, Box } from '@vapor-ui/core';
 import EmojiPicker from './EmojiPicker';
 import { Toast } from './Toast';
 
-const MessageActions = ({ 
-  messageId,
-  messageContent,
-  reactions,
-  currentUserId,
-  onReactionAdd,
-  onReactionRemove,
+const MessageActions = ({
+  messageId = '',
+  messageContent = '',
+  reactions = {},
+  currentUserId = null,
+  onReactionAdd = () => {},
+  onReactionRemove = () => {},
   isMine = false,
   room = null
 }) => {
@@ -253,17 +253,6 @@ const MessageActions = ({
       </HStack>
     </div>
   );
-};
-
-MessageActions.defaultProps = {
-  messageId: '',
-  messageContent: '',
-  reactions: {},
-  currentUserId: null,
-  onReactionAdd: () => {},
-  onReactionRemove: () => {},
-  isMine: false,
-  room: null
 };
 
 export default React.memo(MessageActions);

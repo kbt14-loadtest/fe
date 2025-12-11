@@ -6,13 +6,13 @@ import CustomAvatar from './CustomAvatar';
 import ReadStatus from './ReadStatus';
 
 const UserMessage = ({
-  msg = {}, 
-  isMine = false, 
+  msg = {},
+  isMine = false,
   currentUser = null,
-  onReactionAdd,
-  onReactionRemove,
+  onReactionAdd = () => {},
+  onReactionRemove = () => {},
   room = null,
-  socketRef
+  socketRef = null
 }) => {
   // 메시지 DOM 요소에 대한 ref 생성
   const messageDomRef = useRef(null);
@@ -104,15 +104,6 @@ const UserMessage = ({
       </VStack>
     </div>
   );
-};
-
-UserMessage.defaultProps = {
-  msg: {},
-  isMine: false,
-  currentUser: null,
-  onReactionAdd: () => {},
-  onReactionRemove: () => {},
-  room: null
 };
 
 export default React.memo(UserMessage);
