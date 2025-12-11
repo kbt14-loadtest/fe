@@ -6,7 +6,9 @@ WORKDIR /app
 COPY package.json ./
 
 # 의존성 설치 (빌드에 필요한 devDependencies 포함)
-RUN npm i
+RUN npm i && \
+    npm install -D play playwright
+    
 
 # 소스 코드 복사
 COPY . .
