@@ -73,63 +73,46 @@ const ProfileImageUpload = ({ currentImage, onImageChange }) => {
       }
 
       const presignData = await metaResponse.json();
-      const { presignedProfileImage, presignedImageUrl, imageKey, uploadUrl, url, fields, imageUrl, fileUrl } = presignData || {};
 
-      // 백엔드가 문자열 presigned PUT URL만 내려주는 경우를 우선 사용
-      const finalUploadUrl = presignedProfileImage || presignedImageUrl || uploadUrl || url;
-      if (!finalUploadUrl) {
-        throw new Error('업로드 URL을 받을 수 없습니다.');
+      if (!presignData) {
+        throw new Error('서버 응답이 올바르지 않습니다.');
       }
 
-      // 2) presigned URL로 S3 직접 업로드 (POST 필드 방식 또는 PUT 방식 지원)
-      if (fields) {
-        // FormData POST 방식 (S3 form upload)
-        const uploadForm = new FormData();
-        Object.entries(fields).forEach(([key, value]) => {
-          uploadForm.append(key, value);
-        });
-        uploadForm.append('file', file);
+      console.log('프로필 이미지 백엔드 응답:', presignData);
+      console.log('응답 필드들:', Object.keys(presignData));
 
-        const s3Response = await fetch(finalUploadUrl, {
-          method: 'POST',
-          body: uploadForm
-        });
+      // 백엔드 ProfileImageResponse DTO: { success, message, presignedProfileImage }
+      const presignedUrl = presignData.presignedProfileImage ||
+                          presignData.presignedImageUrl ||
+                          presignData.presignedUrl;
 
-        if (!s3Response.ok) {
-          const errText = await s3Response.text();
-          throw new Error(`S3 업로드에 실패했습니다. (${s3Response.status}) ${errText || ''}`);
-        }
-      } else {
-        // PUT 방식 presigned URL
-        const s3Response = await fetch(finalUploadUrl, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': file.type || 'application/octet-stream'
-          },
-          body: file
-        });
+      console.log('추출된 Presigned URL:', presignedUrl);
 
-        if (!s3Response.ok) {
-          const errText = await s3Response.text();
-          throw new Error(`S3 업로드에 실패했습니다. (${s3Response.status}) ${errText || ''}`);
-        }
+      if (!presignedUrl) {
+        console.error('백엔드 응답에 presignedProfileImage가 없습니다. 전체 응답:', JSON.stringify(presignData, null, 2));
+        throw new Error('업로드 URL을 받을 수 없습니다. 백엔드 응답을 확인해주세요.');
       }
 
-      // 최종 이미지 URL 결정 (백엔드가 내려준 키 우선)
-      const strippedPresignUrl = finalUploadUrl.split('?')[0]; // 쿼리 제거해 공개 URL로 사용
-      let finalImageUrl =
-        imageKey ||
-        imageUrl ||
-        fileUrl ||
-        presignData?.finalUrl ||
-        (fields?.key ? `${finalUploadUrl}/${fields.key}` : null) ||
-        strippedPresignUrl;
+      // 2) presigned URL로 S3 직접 업로드 (PUT 방식)
+      const s3Response = await fetch(presignedUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type || 'application/octet-stream'
+        },
+        body: file
+      });
 
-      if (!finalImageUrl) {
-        // 마지막 fallback: presigned 응답에 url만 있고 key가 없을 때는 업로드 URL을 그대로 사용
-        finalImageUrl = finalUploadUrl;
+      if (!s3Response.ok) {
+        const errText = await s3Response.text();
+        throw new Error(`S3 업로드에 실패했습니다. (${s3Response.status}) ${errText || ''}`);
       }
-      
+
+      // 최종 이미지 URL 결정 (presigned URL에서 쿼리 제거)
+      // presigned URL이 아닌 영구적인 공개 URL 사용
+      const finalImageUrl = presignedUrl.split('?')[0];
+
+      console.log('최종 이미지 URL:', finalImageUrl);
+
       // 로컬 스토리지의 사용자 정보 업데이트
       const updatedUser = {
         ...user,
@@ -266,11 +249,11 @@ const ProfileImageUpload = ({ currentImage, onImageChange }) => {
       />
 
       {error && (
-        <Callout color="danger">
-          <HStack gap="$200" alignItems="center">
+        <Callout.Root colorPalette="danger">
+          <Callout.Icon>
             <Text>{error}</Text>
-          </HStack>
-        </Callout>
+          </Callout.Icon>
+        </Callout.Root>
       )}
 
       {uploading && (

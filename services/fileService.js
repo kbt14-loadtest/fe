@@ -147,6 +147,123 @@ class FileService {
       return this.handleUploadError(error);
     }
   }
+
+  async uploadFileWithPresignedUrl(file, onProgress, token, sessionId) {
+    const validationResult = await this.validateFile(file);
+    if (!validationResult.success) {
+      return validationResult;
+    }
+
+    try {
+      const source = CancelToken.source();
+      this.activeUploads.set(file.name, source);
+
+      // 1) 백엔드에 presigned URL 요청
+      const metaUrl = this.baseUrl ?
+        `${this.baseUrl}/api/files/presigned-upload` :
+        '/api/files/presigned-upload';
+
+      const metaResponse = await axiosInstance.post(
+        metaUrl,
+        {
+          contentType: file.type || 'application/octet-stream',
+          fileName: file.name || 'file'
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-token': token,
+            'x-session-id': sessionId
+          },
+          withCredentials: true,
+          cancelToken: source.token
+        }
+      );
+
+      if (!metaResponse.data) {
+        throw new Error('서버 응답이 올바르지 않습니다.');
+      }
+
+      console.log('백엔드 presigned URL 응답:', metaResponse.data);
+
+      const presignData = metaResponse.data;
+
+      // 백엔드 DTO: { presignedImageUrl, imageKey }
+      const presignedUrl = presignData.presignedImageUrl || presignData.presignedUrl || presignData.uploadUrl;
+      const imageKey = presignData.imageKey || presignData.fileKey;
+
+      console.log('Presigned URL:', presignedUrl);
+      console.log('Image Key:', imageKey);
+
+      if (!presignedUrl) {
+        console.error('백엔드 응답에 presignedImageUrl이 없습니다:', presignData);
+        throw new Error('업로드 URL을 받을 수 없습니다.');
+      }
+
+      // 2) S3에 직접 업로드 (PUT 방식)
+      const s3Response = await axios.put(presignedUrl, file, {
+        headers: {
+          'Content-Type': file.type || 'application/octet-stream'
+        },
+        cancelToken: source.token,
+        onUploadProgress: (progressEvent) => {
+          if (onProgress) {
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            onProgress(percentCompleted);
+          }
+        }
+      });
+
+      if (s3Response.status !== 200) {
+        throw new Error(`S3 업로드에 실패했습니다. (${s3Response.status})`);
+      }
+
+      this.activeUploads.delete(file.name);
+
+      // 최종 파일 URL 결정 (presigned URL에서 쿼리 제거)
+      const finalFileUrl = presignedUrl.split('?')[0];
+
+      console.log('최종 파일 URL:', finalFileUrl);
+
+      // 백엔드가 파일 메타데이터를 제공하지 않으므로 프론트엔드에서 생성
+      // imageKey를 filename으로 사용
+      const filename = imageKey ? imageKey.split('/').pop() : file.name;
+
+      // 파일 메타데이터 반환
+      return {
+        success: true,
+        data: {
+          file: {
+            _id: imageKey, // imageKey를 _id로 사용
+            filename: filename,
+            originalname: file.name,
+            mimetype: file.type,
+            size: file.size,
+            url: finalFileUrl
+          }
+        }
+      };
+
+    } catch (error) {
+      this.activeUploads.delete(file.name);
+
+      if (isCancel(error)) {
+        return {
+          success: false,
+          message: '업로드가 취소되었습니다.'
+        };
+      }
+
+      if (error.response?.status === 401) {
+        throw new Error('Authentication expired. Please login again.');
+      }
+
+      console.error('Presigned URL upload error:', error);
+      return this.handleUploadError(error);
+    }
+  }
   async downloadFile(filename, originalname, token, sessionId) {
     try {
       // 파일 존재 여부 먼저 확인

@@ -82,7 +82,8 @@ export const useMessageHandling = (socketRef, currentUser, router, handleSession
         setUploadError(null);
         setUploadProgress(0);
 
-        const uploadResponse = await fileService.uploadFile(
+        // S3 presigned URL 방식으로 파일 업로드
+        const uploadResponse = await fileService.uploadFileWithPresignedUrl(
           messageData.fileData.file,
           (progress) => setUploadProgress(progress),
           currentUser.token,
